@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fairway</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fairway">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#182e22">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIiB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSIzOCIgZmlsbD0iIzFhM2EyYSIvPgogIDxsaW5lIHgxPSI5MCIgeTE9IjM1IiB4Mj0iOTAiIHkyPSIxMzUiIHN0cm9rZT0iI2M4ZTZjOSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cG9seWdvbiBwb2ludHM9IjkwLDM1IDEzNSw1NiA5MCw3NyIgZmlsbD0iIzRhOGM1YyIvPgogIDxjaXJjbGUgY3g9IjkwIiBjeT0iMTQ1IiByPSIxMiIgZmlsbD0iI2Y0ZjJlZCIvPgogIDxwYXRoIGQ9Ik01MCAxMzMgUTkwIDExOCAxMzAgMTMzIiBzdHJva2U9IiM0YThjNWMiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg==">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green-deep:  #182e22;
+  --green-mid:   #2a5239;
+  --green-light: #3f7a52;
+  --green-pale:  #b8ddc0;
+  --sand:        #e0c97a;
+  --sand-dark:   #b89a40;
+  --water:       #4a87c2;
+  --white:       #f4f2ed;
+  --card:        rgba(255,255,255,0.06);
+  --border:      rgba(255,255,255,0.09);
+  --muted:       rgba(255,255,255,0.38);
+  --danger:      #c0392b;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--green-deep);
+  color: var(--white);
+  overflow-x: hidden;
+}
+
+/* scrollbar hidden */
+::-webkit-scrollbar { display: none; }
+
+/* ── App Shell ── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.app-header {
+  flex-shrink: 0;
+  background: linear-gradient(170deg, var(--green-deep) 0%, var(--green-mid) 100%);
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  z-index: 50;
+}
+.header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.club-name { font-family:'Playfair Display',serif; font-size:17px; line-height:1.2; }
+.club-sub  { font-size:11px; color:var(--green-pale); letter-spacing:1.2px; text-transform:uppercase; margin-top:2px; }
+.course-btn {
+  font-size:11px; font-weight:600; letter-spacing:0.5px;
+  background:rgba(255,255,255,0.08); border:1px solid var(--border);
+  color:var(--green-pale); padding:6px 12px; border-radius:20px; cursor:pointer;
+  white-space:nowrap;
+}
+
+/* ── Nav ── */
+.nav-tabs { display:flex; background:rgba(0,0,0,0.3); border-radius:10px; padding:3px; gap:2px; }
+.nav-tab {
+  flex:1; padding:8px 2px; text-align:center; font-size:12px; font-weight:500;
+  color:var(--muted); cursor:pointer; border-radius:7px; transition:all 0.18s;
+  white-space:nowrap;
+}
+.nav-tab.active { background:var(--green-light); color:var(--white); font-weight:600; }
+
+/* ── Scrollable content ── */
+.pages-wrap {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.page { display:none; padding:14px 16px 24px; }
+.page.active { display:block; }
+
+/* ── Shared ── */
+.section-title { font-family:'Playfair Display',serif; font-size:20px; margin-bottom:12px; }
+.section-sub { font-size:11px; color:var(--green-pale); font-weight:300; margin-left:6px; }
+
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden; margin-bottom:10px;
+}
+.card-header {
+  background:rgba(0,0,0,0.2); padding:9px 14px;
+  font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+  color:var(--green-pale); display:flex; justify-content:space-between; align-items:center;
+}
+
+.btn-primary {
+  width:100%; padding:13px; background:var(--green-light); border:none;
+  color:var(--white); border-radius:12px; font-size:14px; font-weight:600;
+  cursor:pointer; font-family:'DM Sans',sans-serif; letter-spacing:0.3px;
+  margin-top:6px;
+}
+.btn-primary:active { opacity:0.8; }
+.btn-danger {
+  width:100%; padding:11px; background:rgba(192,57,43,0.15);
+  border:1px solid rgba(192,57,43,0.3); color:#ef9a9a; border-radius:10px;
+  font-size:13px; font-weight:500; cursor:pointer; font-family:'DM Sans',sans-serif;
+  margin-top:6px;
+}
+
+/* ══════════════════════════════════════
+   COURSE SELECTOR OVERLAY
+══════════════════════════════════════ */
+.overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  z-index:200; align-items:flex-end; justify-content:center;
+}
+.overlay.open { display:flex; }
+.overlay-sheet {
+  background:var(--green-deep); border:1px solid var(--border);
+  border-radius:20px 20px 0 0; padding:20px 16px 32px;
+  width:100%; max-width:480px; max-height:80dvh; overflow-y:auto;
+}
+.overlay-title { font-family:'Playfair Display',serif; font-size:18px; margin-bottom:14px; }
+.overlay-close { float:right; font-size:20px; cursor:pointer; color:var(--muted); }
+.course-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 14px; background:var(--card); border:1px solid var(--border);
+  border-radius:12px; margin-bottom:8px; cursor:pointer;
+}
+.course-item.active-course { border-color:var(--green-light); background:rgba(63,122,82,0.2); }
+.course-item-name { font-size:14px; font-weight:500; }
+.course-item-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+.course-check { color:var(--green-light); font-size:18px; }
+
+/* ══════════════════════════════════════
+   PLAYERS OVERLAY
+══════════════════════════════════════ */
+.player-setup {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
+  z-index:200; align-items:center; justify-content:center; padding:20px;
+}
+.player-setup.open { display:flex; }
+.player-sheet {
+  background:var(--green-deep); border:1px solid var(--border);
+  border-radius:20px; padding:22px 18px 18px; width:100%; max-width:400px;
+}
+.player-title { font-family:'Playfair Display',serif; font-size:18px; margin-bottom:6px; }
+.player-sub { font-size:12px; color:var(--muted); margin-bottom:16px; line-height:1.5; }
+.player-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.player-num {
+  width:28px; height:28px; border-radius:50%; font-size:13px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.player-input {
+  flex:1; background:rgba(0,0,0,0.3); border:1px solid var(--border);
+  border-radius:9px; padding:9px 12px; color:var(--white); font-size:14px;
+  font-family:'DM Sans',sans-serif;
+}
+.player-input:focus { outline:none; border-color:var(--green-light); }
+.player-input::placeholder { color:var(--muted); }
+.player-remove { color:var(--muted); font-size:18px; cursor:pointer; padding:4px; }
+.btn-add-player {
+  width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px dashed var(--border);
+  color:var(--muted); border-radius:9px; font-size:13px; cursor:pointer;
+  font-family:'DM Sans',sans-serif; margin-bottom:12px;
+}
+
+/* ══════════════════════════════════════
+   PLATZ PAGE
+══════════════════════════════════════ */
+.hole-card { background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:9px; overflow:hidden; cursor:pointer; }
+.hole-card-header { display:flex; align-items:center; padding:11px 13px; gap:11px; }
+.hole-number {
+  width:34px; height:34px; background:var(--green-light); border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:15px; font-weight:700; flex-shrink:0;
+}
+.hole-info { flex:1; min-width:0; }
+.hole-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hole-badges { display:flex; gap:5px; margin-top:4px; flex-wrap:wrap; }
+.badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; letter-spacing:0.4px; white-space:nowrap; }
+.badge-par4 { background:rgba(63,122,82,0.35); color:var(--green-pale); }
+.badge-par5 { background:rgba(139,195,74,0.2); color:#aed581; }
+.badge-par3 { background:rgba(74,135,194,0.25); color:#90caf9; }
+.badge-hcp  { background:rgba(200,165,100,0.2); color:var(--sand); }
+.hole-chevron { color:var(--muted); font-size:16px; flex-shrink:0; transition:transform 0.2s; }
+.hole-chevron.open { transform:rotate(90deg); }
+
+.hole-detail { display:none; border-top:1px solid var(--border); padding:12px 13px 14px; }
+.hole-detail.open { display:block; }
+
+.hole-img-wrap {
+  width:100%; border-radius:10px; overflow:hidden;
+  background:linear-gradient(135deg,var(--green-mid),var(--green-light));
+  margin-bottom:10px; position:relative;
+}
+.hole-img { width:100%; height:auto; max-height:440px; object-fit:contain; display:block; }
+.hole-img-fallback {
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  font-size:40px; opacity:0.3;
+}
+
+.hole-distances {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px;
+}
+.dist-item { background:rgba(0,0,0,0.25); border-radius:8px; padding:7px 4px; text-align:center; }
+.dist-label { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+.dist-value { font-size:15px; font-weight:600; margin-top:2px; }
+.dist-unit  { font-size:9px; color:var(--sand-dark); margin-top:1px; }
+
+.hole-tip {
+  font-size:12px; color:rgba(255,255,255,0.72); line-height:1.65;
+  background:rgba(0,0,0,0.18); border-radius:9px; padding:10px 12px;
+  border-left:3px solid var(--green-light);
+}
+
+/* ── Hole image upload ── */
+.hole-img-actions {
+  display:flex; gap:8px; margin-bottom:10px; align-items:stretch;
+}
+.hole-img-wrap {
+  flex:1; border-radius:10px; overflow:hidden;
+  background:linear-gradient(135deg,var(--green-mid),var(--green-light));
+  position:relative; cursor:pointer;
+}
+.hole-img-upload-btn {
+  position:absolute; bottom:8px; right:8px;
+  background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.2);
+  border-radius:20px; padding:5px 10px; font-size:11px; color:var(--white);
+  cursor:pointer; backdrop-filter:blur(4px); white-space:nowrap;
+}
+.hole-img-upload-btn:active { background:rgba(0,0,0,0.8); }
+.hole-img-remove-btn {
+  position:absolute; top:8px; right:8px;
+  background:rgba(192,57,43,0.7); border:none;
+  border-radius:50%; width:24px; height:24px; font-size:13px; color:var(--white);
+  cursor:pointer; display:none; align-items:center; justify-content:center;
+}
+.hole-img-has-custom .hole-img-remove-btn { display:flex; }
+.hole-file-input { display:none; }
+
+/* ── Inline score in hole detail ── */
+.hole-score-section {
+  background:rgba(0,0,0,0.2); border-radius:10px;
+  padding:10px 12px; margin-bottom:10px;
+}
+.hole-score-title {
+  font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+  color:var(--green-pale); margin-bottom:8px;
+}
+.hole-score-players { display:flex; flex-direction:column; gap:7px; }
+.hole-score-player-row {
+  display:flex; align-items:center; gap:8px;
+}
+.hsp-name {
+  flex:1; font-size:13px; color:rgba(255,255,255,0.85);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.hsp-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.hsp-controls { display:flex; align-items:center; gap:6px; }
+.hsp-btn {
+  width:28px; height:28px; border-radius:50%; border:none;
+  background:rgba(255,255,255,0.1); color:var(--white); font-size:15px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; font-family:'DM Sans',sans-serif; transition:background 0.12s;
+}
+.hsp-btn:active { background:var(--green-light); }
+.hsp-display {
+  width:30px; height:30px; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:600; flex-shrink:0;
+}
+
+/* ══════════════════════════════════════
+   SCORECARD PAGE
+══════════════════════════════════════ */
+.player-switcher {
+  display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; padding-bottom:2px;
+}
+.player-tab {
+  flex-shrink:0; padding:8px 14px; border-radius:20px; font-size:13px; font-weight:500;
+  background:rgba(255,255,255,0.07); border:1px solid var(--border); cursor:pointer;
+  color:var(--muted); transition:all 0.15s; white-space:nowrap;
+}
+.player-tab.active { color:var(--white); border-color:transparent; font-weight:600; }
+
+.score-summary {
+  display:flex; gap:8px; margin-bottom:14px;
+}
+.score-stat {
+  flex:1; text-align:center; background:rgba(0,0,0,0.22); border-radius:10px; padding:10px 4px;
+}
+.score-stat-val { font-size:22px; font-weight:700; font-family:'Playfair Display',serif; line-height:1; }
+.score-stat-label { font-size:10px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:0.5px; }
+.col-pos  { color:#ef9a9a; }
+.col-neg  { color:#81c784; }
+
+/* Scorecard rows */
+.sc-table { width:100%; }
+.sc-row {
+  display:grid;
+  grid-template-columns: 26px 1fr 32px minmax(96px,auto);
+  align-items:center; padding:7px 10px; gap:6px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.sc-row:last-child { border-bottom:none; }
+.sc-hole { font-size:12px; color:var(--muted); text-align:center; }
+.sc-name { font-size:12px; color:rgba(255,255,255,0.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sc-par  { font-size:11px; color:var(--muted); text-align:center; }
+
+.sc-score-wrap { display:flex; align-items:center; justify-content:flex-end; gap:5px; }
+.score-btn {
+  width:30px; height:30px; border-radius:50%; border:none;
+  background:rgba(255,255,255,0.1); color:var(--white); font-size:16px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; line-height:1; transition:background 0.12s; font-family:'DM Sans',sans-serif;
+}
+.score-btn:active { background:var(--green-light); }
+.score-display {
+  width:32px; height:32px; border-radius:7px; display:flex;
+  align-items:center; justify-content:center;
+  font-size:14px; font-weight:600; flex-shrink:0; transition:all 0.12s;
+}
+.s-eagle  { background:rgba(142,68,173,0.45); color:#ce93d8; }
+.s-birdie { background:rgba(230,126,34,0.35); color:#ffcc80; }
+.s-par    { background:rgba(63,122,82,0.4);   color:var(--green-pale); }
+.s-bogey  { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.75); }
+.s-double { background:rgba(192,57,43,0.3);   color:#ef9a9a; }
+.s-worse  { background:rgba(192,57,43,0.5);   color:#ef9a9a; }
+.s-empty  { background:rgba(255,255,255,0.05); color:var(--muted); }
+
+.sc-subtotal { background:rgba(0,0,0,0.28); border-top:1px solid rgba(255,255,255,0.1); }
+.sc-subtotal .sc-name { font-weight:600; font-size:12px; color:var(--white); }
+.sc-subtotal .sc-par  { font-weight:600; font-size:12px; color:var(--sand); }
+
+.legend {
+  display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;
+}
+.legend-item { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--muted); }
+.legend-dot { width:10px; height:10px; border-radius:3px; }
+
+/* compare mini table */
+.compare-table { width:100%; border-collapse:collapse; font-size:12px; }
+.compare-table th {
+  padding:6px 8px; text-align:left; color:var(--muted);
+  font-weight:500; font-size:10px; letter-spacing:0.5px; text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+}
+.compare-table td {
+  padding:7px 8px; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle;
+}
+.compare-table tr:last-child td { border-bottom:none; }
+.cmp-score { font-weight:700; font-size:14px; font-family:'Playfair Display',serif; }
+.cmp-vp    { font-size:11px; }
+
+/* ══════════════════════════════════════
+   SCHLÄGER PAGE
+══════════════════════════════════════ */
+.dist-finder {
+  background:var(--green-mid); border:1px solid var(--green-light);
+  border-radius:14px; padding:15px; margin-bottom:14px;
+}
+.dist-finder-title { font-size:13px; font-weight:600; color:var(--green-pale); margin-bottom:10px; }
+.dist-finder-row { display:flex; gap:8px; align-items:center; }
+.dist-finder-input {
+  flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px; padding:11px 14px; color:var(--white);
+  font-size:20px; font-weight:600; font-family:'DM Sans',sans-serif; text-align:center;
+}
+.dist-finder-input:focus { outline:none; border-color:var(--sand); }
+.dist-unit-label { font-size:13px; color:var(--muted); white-space:nowrap; }
+.dist-result {
+  margin-top:12px; background:rgba(0,0,0,0.2); border-radius:10px; padding:12px; min-height:50px;
+}
+.dist-result-main { font-size:16px; font-weight:600; color:var(--sand); }
+.dist-result-alt  { font-size:12px; color:var(--muted); margin-top:4px; }
+.dist-result-hint { font-size:12px; color:var(--muted); }
+
+.club-row {
+  display:flex; align-items:center; padding:9px 13px;
+  border-bottom:1px solid rgba(255,255,255,0.04); gap:10px;
+}
+.club-row:last-child { border-bottom:none; }
+.club-icon  { font-size:17px; width:26px; text-align:center; flex-shrink:0; }
+.club-label { flex:1; font-size:13px; color:rgba(255,255,255,0.85); }
+.club-input {
+  width:68px; background:rgba(0,0,0,0.3); border:1px solid var(--border);
+  border-radius:8px; padding:7px 6px; color:var(--white);
+  font-size:14px; font-weight:600; text-align:center;
+  font-family:'DM Sans',sans-serif; -webkit-appearance:none;
+}
+.club-input:focus { outline:none; border-color:var(--green-light); }
+.club-unit { font-size:11px; color:var(--muted); width:14px; }
+
+/* ══════════════════════════════════════
+   STATISTIK PAGE
+══════════════════════════════════════ */
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
+.stat-card-title { font-size:11px; font-weight:600; color:var(--green-pale); margin-bottom:12px; letter-spacing:1px; text-transform:uppercase; }
+.stat-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.stat-row:last-child { border-bottom:none; }
+.stat-label { font-size:12px; color:rgba(255,255,255,0.7); }
+.stat-value { font-size:14px; font-weight:600; }
+
+.empty-state { text-align:center; padding:36px 20px; color:var(--muted); font-size:13px; line-height:1.8; }
+.empty-icon  { font-size:36px; margin-bottom:12px; opacity:0.4; }
+
+.history-item {
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:11px 13px; margin-bottom:8px;
+}
+.hi-date  { font-size:11px; color:var(--muted); }
+.hi-score { font-size:20px; font-weight:700; font-family:'Playfair Display',serif; }
+.hi-vp    { font-size:11px; margin-top:2px; }
+.hi-course{ font-size:10px; color:var(--muted); margin-top:1px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── Header ── -->
+  <div class="app-header">
+    <div class="header-row">
+      <div>
+        <div class="club-name" id="hdr-name">Fairway</div>
+        <div class="club-sub" id="hdr-sub">Bad Zwischenahn · 18 Löcher</div>
+      </div>
+      <div class="course-btn" onclick="openCourseOverlay()">⛳ Platz wechseln</div>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab active" onclick="showPage('platz',this)">Platz</div>
+      <div class="nav-tab" onclick="showPage('scorecard',this)">Scorecard</div>
+      <div class="nav-tab" onclick="showPage('schlaeger',this)">Schläger</div>
+      <div class="nav-tab" onclick="showPage('statistik',this)">Statistik</div>
+    </div>
+  </div>
+
+  <!-- ── Pages ── -->
+  <div class="pages-wrap">
+
+    <!-- PLATZ -->
+    <div class="page active" id="page-platz">
+      <div class="section-title">Der Platz <span class="section-sub">Alle 18 Löcher</span></div>
+      <div id="hole-list"></div>
+    </div>
+
+    <!-- SCORECARD -->
+    <div class="page" id="page-scorecard">
+      <div class="section-title">Scorecard</div>
+
+      <!-- Player tabs -->
+      <div class="player-switcher" id="player-switcher"></div>
+
+      <!-- Summary -->
+      <div class="score-summary">
+        <div class="score-stat"><div class="score-stat-val" id="sc-total">–</div><div class="score-stat-label">Gesamt</div></div>
+        <div class="score-stat"><div class="score-stat-val" id="sc-vp">–</div><div class="score-stat-label">vs. Par</div></div>
+        <div class="score-stat"><div class="score-stat-val" id="sc-holes">0</div><div class="score-stat-label">Löcher</div></div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#8e44ad;opacity:0.7"></div>Eagle–</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e67e22;opacity:0.6"></div>Birdie</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3f7a52;opacity:0.7"></div>Par</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.15)"></div>Bogey</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c0392b;opacity:0.5"></div>Double+</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>OUT – Löcher 1–9</span><span id="sc-out-hdr">Par 36</span></div>
+        <div id="sc-out"></div>
+        <div class="sc-row sc-subtotal">
+          <div class="sc-hole"></div>
+          <div class="sc-name">Out</div>
+          <div class="sc-par" id="out-par-label">36</div>
+          <div class="sc-score-wrap"><div class="score-display s-empty" id="out-total">–</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>IN – Löcher 10–18</span><span id="sc-in-hdr">Par 36</span></div>
+        <div id="sc-in"></div>
+        <div class="sc-row sc-subtotal">
+          <div class="sc-hole"></div>
+          <div class="sc-name">In</div>
+          <div class="sc-par" id="in-par-label">36</div>
+          <div class="sc-score-wrap"><div class="score-display s-empty" id="in-total">–</div></div>
+        </div>
+      </div>
+
+      <!-- Compare -->
+      <div class="card" id="compare-card" style="display:none">
+        <div class="card-header">Vergleich</div>
+        <div style="padding:4px 6px 8px;">
+          <table class="compare-table" id="compare-table"></table>
+        </div>
+      </div>
+
+      <button class="btn-danger" onclick="resetRound()">🔄 Runde zurücksetzen</button>
+    </div>
+
+    <!-- SCHLÄGER -->
+    <div class="page" id="page-schlaeger">
+      <div class="section-title">Schläger <span class="section-sub">Distanzen</span></div>
+
+      <div class="dist-finder">
+        <div class="dist-finder-title">🎯 Schläger-Finder</div>
+        <div class="dist-finder-row">
+          <input class="dist-finder-input" type="number" id="dist-query" placeholder="145" oninput="findClub()" inputmode="numeric">
+          <div class="dist-unit-label">Meter</div>
+        </div>
+        <div class="dist-result" id="dist-result">
+          <div class="dist-result-hint">Distanz eingeben → passenden Schläger sehen</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Deine Distanzen <span style="font-weight:400;opacity:0.6">(einmalig eintragen)</span></div>
+        <div id="club-inputs"></div>
+      </div>
+    </div>
+
+    <!-- STATISTIK -->
+    <div class="page" id="page-statistik">
+      <div class="section-title">Statistik</div>
+      <div id="stat-content"></div>
+
+      <button class="btn-primary" onclick="saveRound()">💾 Runde speichern</button>
+
+      <div style="margin-top:18px;">
+        <div class="section-title" style="font-size:17px;margin-bottom:10px;">Rundenhistorie</div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+  </div><!-- /pages-wrap -->
+</div><!-- /app-shell -->
+
+<!-- ══ Course Overlay ══ -->
+<div class="overlay" id="course-overlay" onclick="closeCourseOverlay(event)">
+  <div class="overlay-sheet">
+    <span class="overlay-close" onclick="closeCourseOverlay()">✕</span>
+    <div class="overlay-title">Platz wählen</div>
+    <div id="course-list"></div>
+  </div>
+</div>
+
+<!-- ══ Players Overlay ══ -->
+<div class="player-setup" id="player-overlay">
+  <div class="player-sheet">
+    <div class="player-title">Spieler eintragen</div>
+    <div class="player-sub">Trag die Namen der Mitspieler ein. Mindestens 1, maximal 4 Spieler.</div>
+    <div id="player-rows"></div>
+    <button class="btn-add-player" id="btn-add-player" onclick="addPlayerRow()">+ Spieler hinzufügen</button>
+    <button class="btn-primary" onclick="savePlayers()">Runde starten ▶</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// COURSE DATA
+// ══════════════════════════════════════════
+const COURSES = {
+  'gcam': {
+    id: 'gcam',
+    name: 'Golfclub am Meer',
+    sub: 'Bad Zwischenahn · 18 Löcher',
+    holes: [
+      {n:1,  name:'Eisenholzbaum',         par:4, hcp:16, dist:[316,316,260,260], tip:'Teich vor dem Abschlag. Abschlag vor den linken Fairwaybunker – rechts ist es abschüssig zum Wasser. Rechter Bunker vor dem Grün beachten.',                                                               img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-1_golfclub-am-meer.jpg'},
+      {n:2,  name:'Silberpappel',          par:4, hcp:2,  dist:[373,347,308,286], tip:'Schwerstes Loch – Dogleg rechts. Sicherheitsspieler links am Wasser vorbei, Longhitter direkt drüber. Zwei Bunker rechts vor dem Grün.',                                                                  img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-2_golfclub-am-meer.jpg'},
+      {n:3,  name:'Rotbuche',              par:3, hcp:14, dist:[183,172,150,111], tip:'Anspruchsvolles Par 3. Linken Grünbunker meiden.',                                                                                                                                                          img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-3_golfclub-am-meer.jpg'},
+      {n:4,  name:'Österr. Schwarzkiefer', par:4, hcp:6,  dist:[353,353,287,287], tip:'Drive-Zone: links Bunker, rechts Rough. Beim Anspielen Bunker links und rechts beachten.',                                                                                                                 img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-4_golfclub-am-meer.jpg'},
+      {n:5,  name:'Mount-Fuji-Kirsche',    par:5, hcp:12, dist:[464,464,378,245], tip:'Drive-Zone durch Bunker verengt. Zweiter Schlag rechts auf dem Fairway. Wasser hinter dem Grün.',                                                                                                          img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-5_golfclub-am-meer.jpg'},
+      {n:6,  name:'Deutsche Eiche',        par:3, hcp:18, dist:[122,122,102,102], tip:'Kürzestes Par 3 – psychologisch durch frontales Wasser herausfordernd. Wind durch den Wald schwer einzuschätzen.',                                                                                         img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-6_golfclub-am-meer.jpg'},
+      {n:7,  name:'Apfeldorn',             par:5, hcp:10, dist:[471,454,389,373], tip:'Rechtes Wasserhindernis. Ball sicher auf der Bahn halten, Wassergraben links und Bunker vor dem Grün meiden. Dreiputt-Gefahr auf dem ondulierten Grün.',                                                  img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-7_golfclub-am-meer.jpg'},
+      {n:8,  name:'Sumpfeiche',            par:4, hcp:4,  dist:[341,341,277,277], tip:'Fairway von Wasser umgeben. Abschlag muss lang und auf der Bahn bleiben. Zwei Fairwaybunker und ein Grünbunker kommen ins Spiel.',                                                                         img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-8_golfclub-am-meer.jpg'},
+      {n:9,  name:'Sieben-Söhne-Strauch',  par:4, hcp:8,  dist:[355,355,327,264], tip:'Zwei Optionen: über den Hügel oder links am Bunker vorbei. Grün: links Wasser, rechts Bunker.',                                                                                                           img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-9_golfclub-am-meer.jpg'},
+      {n:10, name:'Scharlach-Kastanie',    par:4, hcp:13, dist:[305,305,246,246], tip:'Wasserhindernis links + Dogleg links. Büsche rechts gefährlich. Grün frontal und rechts von Bunkern bewacht.',                                                                                             img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-10_golfclub-am-meer.jpg'},
+      {n:11, name:'Gesch. Silberahorn',    par:4, hcp:5,  dist:[336,317,273,253], tip:'Abschlag entscheidend – links und rechts Wasser. Wasser auch links und hinter dem Grün, frontaler Bunker.',                                                                                               img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-11_golfclub-am-meer.jpg'},
+      {n:12, name:'Tupelobaum',            par:3, hcp:17, dist:[151,151,125,125], tip:'Bergab verlaufend, bei Wind schwierig. Rechtes Wasserhindernis und linker Grünbunker.',                                                                                                                    img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-12_golfclub-am-meer.jpg'},
+      {n:13, name:'Apfelbaum',             par:4, hcp:7,  dist:[373,343,307,280], tip:'Drive-Zone durch Hügel mit Bunker verengt. Wasserhindernis rechts auf ganzer Länge. Zwei tiefere Bunker rechts vor dem Grün.',                                                                            img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-13_golfclub-am-meer.jpg'},
+      {n:14, name:'Birnenbaum',            par:5, hcp:9,  dist:[498,469,412,380], tip:'Längstes Par 5. Bunker links und Auslinie rechts. Zweiter Schlag vor den Fairwaybunker – sonst droht ein 80m-Bunkerschlag. Sandfalle vor dem Grün.',                                                      img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-14_golfclub-am-meer.jpg'},
+      {n:15, name:'Blutahorn',             par:4, hcp:1,  dist:[398,381,336,309], tip:'Schwerstes Loch! Dogleg links – zu weit rechts macht es sehr lang. Longhitter über die Fairwaybunker. Grünbunker beachten.',                                                                               img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-15_golfclub-am-meer.jpg'},
+      {n:16, name:'Pyramidenpappel',       par:4, hcp:3,  dist:[353,353,293,293], tip:'Abschlag rechts am Baum vorbei – nicht zu lang (Bunker ab ca. 120m zum Grün). Drei Bunker am Grün, Wasser seitlich und dahinter.',                                                                        img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-16_golfclub-am-meer.jpg'},
+      {n:17, name:'Sommerlinde',           par:3, hcp:11, dist:[191,176,154,134], tip:'Längstes Par 3. Zwei Bunker rechts, einer links. Windrichtung bestimmt die Schwierigkeit.',                                                                                                                img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-17_golfclub-am-meer.jpg'},
+      {n:18, name:'Blauglockenbaum',       par:5, hcp:15, dist:[458,432,374,359], tip:'Finales Par 5 – aggressiv oder sicher? Wasser auf gesamter Bahnlänge, frontal vor dem Grün. Bunker vor dem Grün nicht vergessen.',                                                                        img:'https://golfclub-am-meer.de/golfanlage/der-platz/index.php?rex_media_type=course&rex_media_file=bahn-18_golfclub-am-meer.jpg'},
+    ]
+  }
+  // Weitere Plätze können hier ergänzt werden
+};
+
+const CLUBS = [
+  {id:'driver', label:'Driver',    icon:'🏌️'},
+  {id:'3wood',  label:'3er Holz',  icon:'🌲'},
+  {id:'5wood',  label:'5er Holz',  icon:'🌿'},
+  {id:'4iron',  label:'4er Eisen', icon:'🔩'},
+  {id:'5iron',  label:'5er Eisen', icon:'🔩'},
+  {id:'6iron',  label:'6er Eisen', icon:'🔩'},
+  {id:'7iron',  label:'7er Eisen', icon:'🔩'},
+  {id:'8iron',  label:'8er Eisen', icon:'🔩'},
+  {id:'9iron',  label:'9er Eisen', icon:'🔩'},
+  {id:'pw',     label:'Pitching W.',icon:'⛳'},
+  {id:'aw',     label:'AW / GW',   icon:'⛳'},
+  {id:'sw',     label:'Sand W.',    icon:'⛳'},
+  {id:'lw',     label:'Lob W. 60°',icon:'⛳'},
+  {id:'putter', label:'Putter',    icon:'🏁'},
+];
+
+const PLAYER_COLORS = ['#3f7a52','#4a87c2','#c47c2b','#9b59b6'];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let state = {
+  courseId:    localStorage.getItem('golf-courseId') || 'gcam',
+  players:     JSON.parse(localStorage.getItem('golf-players') || '["Spieler 1"]'),
+  activePlayer: 0,
+  scores:      JSON.parse(localStorage.getItem('golf-scores') || 'null'),
+  clubDists:   JSON.parse(localStorage.getItem('golf-clubs')  || '{}'),
+  history:     JSON.parse(localStorage.getItem('golf-history')|| '[]'),
+};
+
+// Ensure scores structure
+function ensureScores() {
+  const n = state.players.length;
+  const h = currentCourse().holes.length;
+  if (!state.scores || state.scores.length !== n || (state.scores[0] && state.scores[0].length !== h)) {
+    state.scores = Array.from({length: n}, () => new Array(h).fill(null));
+    saveState();
+  }
+}
+function currentCourse() { return COURSES[state.courseId] || COURSES['gcam']; }
+function saveState() {
+  localStorage.setItem('golf-courseId', state.courseId);
+  localStorage.setItem('golf-players',  JSON.stringify(state.players));
+  localStorage.setItem('golf-scores',   JSON.stringify(state.scores));
+  localStorage.setItem('golf-clubs',    JSON.stringify(state.clubDists));
+  localStorage.setItem('golf-history',  JSON.stringify(state.history));
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (tab) tab.classList.add('active');
+  if (id === 'statistik') renderStats();
+  if (id === 'scorecard') renderScorecard();
+}
+
+// ══════════════════════════════════════════
+// COURSE OVERLAY
+// ══════════════════════════════════════════
+function openCourseOverlay() {
+  const list = document.getElementById('course-list');
+  list.innerHTML = Object.values(COURSES).map(c => `
+    <div class="course-item ${c.id === state.courseId ? 'active-course' : ''}" onclick="selectCourse('${c.id}')">
+      <div>
+        <div class="course-item-name">${c.name}</div>
+        <div class="course-item-sub">${c.sub}</div>
+      </div>
+      ${c.id === state.courseId ? '<div class="course-check">✓</div>' : ''}
+    </div>
+  `).join('') + `
+    <div style="margin-top:10px;padding:12px;background:rgba(255,255,255,0.04);border:1px dashed var(--border);border-radius:12px;text-align:center;font-size:12px;color:var(--muted);line-height:1.7;">
+      Weiteren Platz hinzufügen?<br>Schick mir den Link zur Platz-Seite –<br>ich erstelle eine neue Version der App. 🏌️
+    </div>`;
+  document.getElementById('course-overlay').classList.add('open');
+}
+function closeCourseOverlay(e) {
+  if (!e || e.target === document.getElementById('course-overlay')) {
+    document.getElementById('course-overlay').classList.remove('open');
+  }
+}
+function selectCourse(id) {
+  state.courseId = id;
+  state.scores = null;
+  ensureScores();
+  saveState();
+  updateHeader();
+  renderPlatz();
+  renderScorecard();
+  closeCourseOverlay();
+}
+function updateHeader() {
+  const c = currentCourse();
+  document.getElementById('hdr-name').textContent = 'Fairway';
+  document.getElementById('hdr-sub').textContent = c.name + ' · ' + c.holes.length + ' Löcher';
+}
+
+// ══════════════════════════════════════════
+// PLAYERS OVERLAY
+// ══════════════════════════════════════════
+function openPlayerOverlay() {
+  renderPlayerRows();
+  document.getElementById('player-overlay').classList.add('open');
+}
+function renderPlayerRows() {
+  const wrap = document.getElementById('player-rows');
+  wrap.innerHTML = state.players.map((p, i) => `
+    <div class="player-row">
+      <div class="player-num" style="background:${PLAYER_COLORS[i]}">${i+1}</div>
+      <input class="player-input" id="pname-${i}" value="${p}" placeholder="Name Spieler ${i+1}">
+      ${i > 0 ? `<div class="player-remove" onclick="removePlayerRow(${i})">✕</div>` : '<div style="width:22px"></div>'}
+    </div>`).join('');
+  document.getElementById('btn-add-player').style.display = state.players.length >= 4 ? 'none' : '';
+}
+function addPlayerRow() {
+  if (state.players.length >= 4) return;
+  state.players.push('Spieler ' + (state.players.length + 1));
+  renderPlayerRows();
+}
+function removePlayerRow(i) {
+  state.players.splice(i, 1);
+  renderPlayerRows();
+}
+function savePlayers() {
+  const names = state.players.map((_, i) => document.getElementById('pname-'+i)?.value.trim() || ('Spieler '+(i+1)));
+  state.players = names;
+  state.scores = null;
+  state.activePlayer = 0;
+  ensureScores();
+  saveState();
+  document.getElementById('player-overlay').classList.remove('open');
+  renderScorecard();
+}
+
+// ══════════════════════════════════════════
+// PLATZ
+// ══════════════════════════════════════════
+function getHoleImgKey(courseId, holeN) { return `golf-img-${courseId}-${holeN}`; }
+
+function renderHoleImage(h) {
+  const key = getHoleImgKey(state.courseId, h.n);
+  const custom = localStorage.getItem(key);
+  const hasCustom = !!custom;
+  const imgSrc = custom || h.img;
+  return `
+    <div class="hole-img-wrap ${hasCustom ? 'hole-img-has-custom' : ''}" id="imgwrap-${h.n}">
+      <img class="hole-img" id="holeimg-${h.n}" src="${imgSrc}" alt="Loch ${h.n}" loading="lazy"
+        onerror="this.style.display='none';document.getElementById('imgfb-${h.n}').style.display='flex'">
+      <div class="hole-img-fallback" id="imgfb-${h.n}" style="display:none">⛳</div>
+      <div class="hole-img-upload-btn" onclick="event.stopPropagation();triggerImgUpload(${h.n})">📷 Bild ändern</div>
+      <button class="hole-img-remove-btn" onclick="event.stopPropagation();removeHoleImg(${h.n})" title="Bild entfernen">✕</button>
+    </div>
+    <input type="file" accept="image/*" class="hole-file-input" id="fileInput-${h.n}"
+      onchange="handleImgUpload(${h.n}, this)">`;
+}
+
+function renderInlineScore(h) {
+  const idx = h.n - 1;
+  const playerRows = state.players.map((name, pi) => {
+    const sc = state.scores[pi]?.[idx] ?? null;
+    return `
+    <div class="hole-score-player-row">
+      <div class="hsp-dot" style="background:${PLAYER_COLORS[pi]}"></div>
+      <div class="hsp-name">${name}</div>
+      <div class="hsp-controls">
+        <button class="hsp-btn" onclick="event.stopPropagation();changeScoreInline(${idx},${pi},-1)">−</button>
+        <div class="hsp-display ${scoreClass(sc,h.par)}" id="hsp-${h.n}-${pi}">${sc ?? '–'}</div>
+        <button class="hsp-btn" onclick="event.stopPropagation();changeScoreInline(${idx},${pi},1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="hole-score-section">
+      <div class="hole-score-title">⛳ Score eintragen</div>
+      <div class="hole-score-players">${playerRows}</div>
+    </div>`;
+}
+
+function renderPlatz() {
+  const holes = currentCourse().holes;
+  document.getElementById('hole-list').innerHTML = holes.map(h => {
+    const pc = h.par === 3 ? 'badge-par3' : h.par === 5 ? 'badge-par5' : 'badge-par4';
+    return `
+    <div class="hole-card">
+      <div class="hole-card-header" onclick="toggleHole(${h.n})">
+        <div class="hole-number">${h.n}</div>
+        <div class="hole-info">
+          <div class="hole-name">${h.name}</div>
+          <div class="hole-badges">
+            <span class="badge ${pc}">Par ${h.par}</span>
+            <span class="badge badge-hcp">Hcp ${h.hcp}</span>
+          </div>
+        </div>
+        <div class="hole-chevron" id="chev-${h.n}">›</div>
+      </div>
+      <div class="hole-detail" id="detail-${h.n}">
+        ${renderHoleImage(h)}
+        <div class="hole-distances">
+          <div class="dist-item"><div class="dist-label">Gelb</div><div class="dist-value">${h.dist[0]}</div><div class="dist-unit">m</div></div>
+          <div class="dist-item"><div class="dist-label">Gelb 2</div><div class="dist-value">${h.dist[1]}</div><div class="dist-unit">m</div></div>
+          <div class="dist-item"><div class="dist-label">Rot</div><div class="dist-value">${h.dist[2]}</div><div class="dist-unit">m</div></div>
+          <div class="dist-item"><div class="dist-label">Rot 2</div><div class="dist-value">${h.dist[3]}</div><div class="dist-unit">m</div></div>
+        </div>
+        ${renderInlineScore(h)}
+        <div class="hole-tip">💡 ${h.tip}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHole(n) {
+  const d = document.getElementById('detail-' + n);
+  const c = document.getElementById('chev-' + n);
+  const isOpen = d.classList.contains('open');
+  document.querySelectorAll('.hole-detail.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.hole-chevron.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) { d.classList.add('open'); c.classList.add('open'); }
+}
+
+// ── Image upload helpers ──
+function triggerImgUpload(n) {
+  document.getElementById('fileInput-' + n).click();
+}
+
+function handleImgUpload(n, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = e.target.result;
+    try {
+      localStorage.setItem(getHoleImgKey(state.courseId, n), data);
+    } catch(err) {
+      alert('Bild konnte nicht gespeichert werden – möglicherweise zu groß. Bitte ein kleineres Bild verwenden.');
+      return;
+    }
+    const img = document.getElementById('holeimg-' + n);
+    const wrap = document.getElementById('imgwrap-' + n);
+    const fb = document.getElementById('imgfb-' + n);
+    img.src = data;
+    img.style.display = 'block';
+    fb.style.display = 'none';
+    wrap.classList.add('hole-img-has-custom');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeHoleImg(n) {
+  localStorage.removeItem(getHoleImgKey(state.courseId, n));
+  const hole = currentCourse().holes[n - 1];
+  const img = document.getElementById('holeimg-' + n);
+  const wrap = document.getElementById('imgwrap-' + n);
+  img.src = hole.img;
+  img.style.display = 'block';
+  wrap.classList.remove('hole-img-has-custom');
+}
+
+// ── Inline score change (syncs with scorecard) ──
+function changeScoreInline(idx, pi, delta) {
+  ensureScores();
+  const par = currentCourse().holes[idx].par;
+  const cur = state.scores[pi][idx] !== null ? state.scores[pi][idx] : par;
+  state.scores[pi][idx] = Math.max(1, Math.min(15, cur + delta));
+  saveState();
+
+  // Update inline display
+  const holeN = idx + 1;
+  const el = document.getElementById(`hsp-${holeN}-${pi}`);
+  if (el) {
+    el.textContent = state.scores[pi][idx];
+    el.className = 'hsp-display ' + scoreClass(state.scores[pi][idx], par);
+  }
+
+  // Also update scorecard if visible
+  const scEl = document.getElementById('scd-' + idx);
+  if (scEl && pi === state.activePlayer) {
+    scEl.textContent = state.scores[pi][idx];
+    scEl.className = 'score-display ' + scoreClass(state.scores[pi][idx], par);
+    updateScoreSummary();
+  }
+}
+
+// ══════════════════════════════════════════
+// SCORECARD
+// ══════════════════════════════════════════
+function renderScorecard() {
+  ensureScores();
+  const course = currentCourse();
+  const holes = course.holes;
+
+  // Player tabs
+  const switcher = document.getElementById('player-switcher');
+  switcher.innerHTML = state.players.map((p, i) => `
+    <div class="player-tab ${i === state.activePlayer ? 'active' : ''}"
+      style="${i === state.activePlayer ? 'background:'+PLAYER_COLORS[i]+';' : ''}"
+      onclick="switchPlayer(${i})">${p}</div>
+  `).join('') + `<div class="player-tab" onclick="openPlayerOverlay()" style="border-style:dashed">✏️ Spieler</div>`;
+
+  const pi = state.activePlayer;
+  const outEl = document.getElementById('sc-out');
+  const inEl  = document.getElementById('sc-in');
+  outEl.innerHTML = '';
+  inEl.innerHTML  = '';
+
+  holes.forEach((h, idx) => {
+    const sc = state.scores[pi]?.[idx] ?? null;
+    const row = document.createElement('div');
+    row.className = 'sc-row';
+    row.innerHTML = `
+      <div class="sc-hole">${h.n}</div>
+      <div class="sc-name">${h.name.split(' ')[0]}</div>
+      <div class="sc-par">${h.par}</div>
+      <div class="sc-score-wrap">
+        <button class="score-btn" onclick="changeScore(${idx},-1)">−</button>
+        <div class="score-display ${scoreClass(sc,h.par)}" id="scd-${idx}">${sc ?? '–'}</div>
+        <button class="score-btn" onclick="changeScore(${idx},1)">+</button>
+      </div>`;
+    (idx < 9 ? outEl : inEl).appendChild(row);
+  });
+
+  updateScoreSummary();
+  refreshInlineScores();
+}
+
+function switchPlayer(i) {
+  state.activePlayer = i;
+  renderScorecard();
+}
+
+function refreshInlineScores() {
+  const holes = currentCourse().holes;
+  holes.forEach((h, idx) => {
+    state.players.forEach((_, pi) => {
+      const el = document.getElementById(`hsp-${h.n}-${pi}`);
+      if (!el) return;
+      const sc = state.scores[pi]?.[idx] ?? null;
+      el.textContent = sc ?? '–';
+      el.className = 'hsp-display ' + scoreClass(sc, h.par);
+    });
+  });
+}
+
+function changeScore(idx, delta) {
+  ensureScores();
+  const pi  = state.activePlayer;
+  const par = currentCourse().holes[idx].par;
+  const cur = state.scores[pi][idx] !== null ? state.scores[pi][idx] : par;
+  state.scores[pi][idx] = Math.max(1, Math.min(15, cur + delta));
+  saveState();
+
+  const el = document.getElementById('scd-' + idx);
+  el.textContent = state.scores[pi][idx];
+  el.className = 'score-display ' + scoreClass(state.scores[pi][idx], par);
+
+  // Sync inline hole score
+  const holeN = idx + 1;
+  const inlineEl = document.getElementById(`hsp-${holeN}-${pi}`);
+  if (inlineEl) {
+    inlineEl.textContent = state.scores[pi][idx];
+    inlineEl.className = 'hsp-display ' + scoreClass(state.scores[pi][idx], par);
+  }
+
+  updateScoreSummary();
+}
+
+function scoreClass(sc, par) {
+  if (sc === null) return 's-empty';
+  const d = sc - par;
+  if (d <= -2) return 's-eagle';
+  if (d === -1) return 's-birdie';
+  if (d === 0)  return 's-par';
+  if (d === 1)  return 's-bogey';
+  if (d === 2)  return 's-double';
+  return 's-worse';
+}
+
+function updateScoreSummary() {
+  const pi    = state.activePlayer;
+  const holes = currentCourse().holes;
+  const pscores = state.scores[pi] || [];
+
+  const played   = pscores.filter(s => s !== null);
+  const total    = played.reduce((a,b) => a+b, 0);
+  const parPlay  = holes.filter((_,i) => pscores[i] !== null).reduce((a,h) => a+h.par, 0);
+
+  document.getElementById('sc-holes').textContent = played.length;
+  document.getElementById('sc-total').textContent = played.length ? total : '–';
+
+  const vpEl = document.getElementById('sc-vp');
+  if (played.length) {
+    const vp = total - parPlay;
+    vpEl.textContent = vp === 0 ? 'Par' : (vp > 0 ? '+'+vp : ''+vp);
+    vpEl.className = 'score-stat-val ' + (vp > 0 ? 'col-pos' : vp < 0 ? 'col-neg' : '');
+  } else {
+    vpEl.textContent = '–'; vpEl.className = 'score-stat-val';
+  }
+
+  // Out / In totals
+  const outSc = pscores.slice(0,9);
+  const inSc  = pscores.slice(9);
+  const outT  = outSc.filter(s=>s!==null);
+  const inT   = inSc.filter(s=>s!==null);
+
+  const outEl = document.getElementById('out-total');
+  const inEl  = document.getElementById('in-total');
+  outEl.textContent = outT.length ? outT.reduce((a,b)=>a+b,0) : '–';
+  outEl.className = 'score-display ' + (outT.length === 9 ? 's-bogey' : 's-empty');
+  inEl.textContent = inT.length ? inT.reduce((a,b)=>a+b,0) : '–';
+  inEl.className = 'score-display ' + (inT.length === 9 ? 's-bogey' : 's-empty');
+
+  // Compare table
+  renderCompare();
+}
+
+function renderCompare() {
+  if (state.players.length < 2) {
+    document.getElementById('compare-card').style.display = 'none';
+    return;
+  }
+  document.getElementById('compare-card').style.display = '';
+  const holes = currentCourse().holes;
+  const totalPar = holes.reduce((a,h) => a+h.par, 0);
+
+  const rows = state.players.map((name, pi) => {
+    const psc = state.scores[pi] || [];
+    const played = psc.filter(s=>s!==null);
+    const total = played.reduce((a,b)=>a+b,0);
+    const parPlayed = holes.filter((_,i)=>psc[i]!==null).reduce((a,h)=>a+h.par,0);
+    const vp = played.length ? total - parPlayed : null;
+    const vpStr = vp === null ? '–' : (vp === 0 ? 'Par' : (vp>0?'+'+vp:''+vp));
+    const vpCol = vp === null ? '' : (vp > 0 ? 'col-pos' : vp < 0 ? 'col-neg' : '');
+    return `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${PLAYER_COLORS[pi]};margin-right:6px;vertical-align:middle;"></span>${name}</td>
+      <td class="cmp-score">${played.length ? total : '–'}</td>
+      <td class="cmp-vp ${vpCol}">${vpStr}</td>
+      <td style="font-size:11px;color:var(--muted)">${played.length}/18</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('compare-table').innerHTML =
+    `<thead><tr><th>Spieler</th><th>Score</th><th>vs. Par</th><th>Löcher</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function resetRound() {
+  if (!confirm('Alle Scores zurücksetzen?')) return;
+  state.scores = null;
+  ensureScores();
+  saveState();
+  renderScorecard();
+}
+
+// ══════════════════════════════════════════
+// SCHLÄGER
+// ══════════════════════════════════════════
+function renderClubs() {
+  document.getElementById('club-inputs').innerHTML = CLUBS.map(c => `
+    <div class="club-row">
+      <div class="club-icon">${c.icon}</div>
+      <div class="club-label">${c.label}</div>
+      <input class="club-input" type="number" inputmode="numeric" id="club-${c.id}"
+        placeholder="–" value="${state.clubDists[c.id] || ''}"
+        onchange="saveClub('${c.id}',this.value)">
+      <div class="club-unit">m</div>
+    </div>`).join('');
+}
+
+function saveClub(id, val) {
+  if (val && !isNaN(val)) state.clubDists[id] = parseInt(val);
+  else delete state.clubDists[id];
+  saveState();
+  findClub();
+}
+
+function findClub() {
+  const target = parseInt(document.getElementById('dist-query').value);
+  const res = document.getElementById('dist-result');
+  if (!target || target < 5) {
+    res.innerHTML = '<div class="dist-result-hint">Distanz eingeben → passenden Schläger sehen</div>';
+    return;
+  }
+  const entries = CLUBS.filter(c => state.clubDists[c.id])
+    .map(c => ({...c, dist: state.clubDists[c.id]}))
+    .sort((a,b) => b.dist - a.dist);
+
+  if (!entries.length) {
+    res.innerHTML = '<div class="dist-result-hint">Trag zuerst deine Distanzen ein.</div>'; return;
+  }
+  const best = entries.reduce((p,c) => Math.abs(c.dist-target) < Math.abs(p.dist-target) ? c : p);
+  const diff = best.dist - target;
+  const diffTxt = diff === 0 ? 'genau richtig' : (diff > 0 ? diff+'m mehr' : Math.abs(diff)+'m weniger');
+  const alts = entries.filter(e=>e.id!==best.id).sort((a,b)=>Math.abs(a.dist-target)-Math.abs(b.dist-target)).slice(0,2);
+  res.innerHTML = `
+    <div class="dist-result-main">${best.icon} ${best.label} – ${best.dist}m <span style="font-size:12px;color:var(--muted)">(${diffTxt})</span></div>
+    ${alts.length ? `<div class="dist-result-alt">Alt: ${alts.map(a=>`${a.label} ${a.dist}m`).join(' · ')}</div>` : ''}`;
+}
+
+// ══════════════════════════════════════════
+// STATISTIK
+// ══════════════════════════════════════════
+function renderStats() {
+  const holes = currentCourse().holes;
+  const sc = document.getElementById('stat-content');
+
+  const allEmpty = state.scores && state.scores.every(ps => ps.every(s => s === null));
+  if (!state.scores || allEmpty) {
+    sc.innerHTML = `<div class="stat-card"><div class="empty-state"><div class="empty-icon">📊</div>Noch keine Scores eingegeben.</div></div>`;
+  } else {
+    sc.innerHTML = state.players.map((name, pi) => {
+      const psc = state.scores[pi] || [];
+      const played = psc.map((s,i) => s !== null ? {s, h:holes[i]} : null).filter(Boolean);
+      if (!played.length) return '';
+      const total   = played.reduce((a,b)=>a+b.s,0);
+      const parPlay = played.reduce((a,b)=>a+b.h.par,0);
+      const vp = total - parPlay;
+      const birdies = played.filter(p=>p.s<p.h.par).length;
+      const pars    = played.filter(p=>p.s===p.h.par).length;
+      const bogeys  = played.filter(p=>p.s===p.h.par+1).length;
+      const doubles = played.filter(p=>p.s>=p.h.par+2).length;
+      const best  = played.reduce((a,b)=>(b.s-b.h.par)<(a.s-a.h.par)?b:a);
+      const worst = played.reduce((a,b)=>(b.s-b.h.par)>(a.s-a.h.par)?b:a);
+      const vpStr = vp===0?'Par':(vp>0?'+'+vp:''+vp);
+      const vpCol = vp>0?'col-pos':vp<0?'col-neg':'';
+      return `
+      <div class="stat-card">
+        <div class="stat-card-title" style="color:${PLAYER_COLORS[pi]}">${name}</div>
+        <div class="stat-row"><span class="stat-label">Score (${played.length}/18)</span><span class="stat-value">${total}</span></div>
+        <div class="stat-row"><span class="stat-label">vs. Par</span><span class="stat-value ${vpCol}">${vpStr}</span></div>
+        <div class="stat-row"><span class="stat-label">🟠 Birdies</span><span class="stat-value">${birdies}</span></div>
+        <div class="stat-row"><span class="stat-label">🟢 Pars</span><span class="stat-value">${pars}</span></div>
+        <div class="stat-row"><span class="stat-label">⚪ Bogeys</span><span class="stat-value">${bogeys}</span></div>
+        <div class="stat-row"><span class="stat-label">🔴 Double+</span><span class="stat-value">${doubles}</span></div>
+        <div class="stat-row"><span class="stat-label">Bestes Loch</span><span class="stat-value">Loch ${best.h.n} (${best.s-best.h.par<=0?'':'+'}${best.s-best.h.par})</span></div>
+        <div class="stat-row"><span class="stat-label">Schwerstes Loch</span><span class="stat-value">Loch ${worst.h.n} (+${worst.s-worst.h.par})</span></div>
+      </div>`;
+    }).join('') || `<div class="stat-card"><div class="empty-state"><div class="empty-icon">📊</div>Noch keine Scores eingegeben.</div></div>`;
+  }
+
+  // History
+  const histEl = document.getElementById('history-list');
+  if (!state.history.length) {
+    histEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🏌️</div>Gespeicherte Runden erscheinen hier.</div>`;
+    return;
+  }
+  histEl.innerHTML = [...state.history].reverse().map(r => {
+    const vp = r.total - r.par;
+    const vpStr = vp===0?'Par':(vp>0?'+'+vp:''+vp);
+    const vpCol = vp>0?'col-pos':vp<0?'col-neg':'';
+    return `
+    <div class="history-item">
+      <div>
+        <div class="hi-date">${r.date}</div>
+        <div class="hi-course" style="color:var(--green-pale)">${r.course}</div>
+        <div class="hi-vp ${vpCol}">${vpStr} vs. Par · ${r.player}</div>
+      </div>
+      <div class="hi-score">${r.total}</div>
+    </div>`;
+  }).join('');
+}
+
+function saveRound() {
+  const holes = currentCourse().holes;
+  const totalPar = holes.reduce((a,h)=>a+h.par,0);
+  let saved = false;
+
+  state.players.forEach((name, pi) => {
+    const psc = state.scores[pi] || [];
+    const played = psc.filter(s=>s!==null);
+    if (played.length < 18) return;
+    const total = played.reduce((a,b)=>a+b,0);
+    const date = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    state.history.push({date, total, par:totalPar, player:name, course:currentCourse().name});
+    saved = true;
+  });
+
+  if (!saved) { alert('Bitte alle 18 Löcher für mindestens einen Spieler eintragen.'); return; }
+  saveState();
+  alert('Runde gespeichert! ⛳');
+  renderStats();
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+ensureScores();
+updateHeader();
+renderPlatz();
+renderScorecard();
+renderClubs();
+
+// Show player setup on first visit
+if (!localStorage.getItem('golf-players')) {
+  setTimeout(openPlayerOverlay, 600);
+}
+</script>
+</body>
+</html>
