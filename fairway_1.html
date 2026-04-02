@@ -449,7 +449,7 @@ html, body {
 
 /* mini scorecard inside overlay */
 .hsc-row {
-  display:grid; grid-template-columns:24px 1fr 28px repeat(4, 34px);
+  display:grid; grid-template-columns:24px 1fr 28px auto;
   align-items:center; padding:6px 8px; gap:4px;
   border-bottom:1px solid rgba(255,255,255,0.04); font-size:12px;
 }
@@ -1220,6 +1220,7 @@ function renderStats() {
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="hi-score">${r.total}</div>
         <div style="color:var(--muted);font-size:16px">›</div>
+        <button onclick="event.stopPropagation();deleteRound(${realIdx})" style="background:rgba(192,57,43,0.2);border:1px solid rgba(192,57,43,0.3);color:#ef9a9a;border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -1277,15 +1278,18 @@ function openHistoryDetail(idx) {
     return;
   }
 
+  const numPlayers = r.players ? r.players.length : 1;
+  const gridCols = `24px 1fr 28px ${Array(numPlayers).fill('34px').join(' ')}`;
+
   // Build player columns header
-  const playerCols = r.players.map((p,pi) =>
+  const playerCols = r.players ? r.players.map((p,pi) =>
     `<div style="width:34px;text-align:center;font-size:10px;font-weight:600;color:${PLAYER_COLORS[pi]};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name.split(' ')[0]}</div>`
-  ).join('');
+  ).join('') : '';
 
   let html = `
     <div style="margin-bottom:10px;">
       <div class="card">
-        <div class="card-header" style="display:grid;grid-template-columns:24px 1fr 28px ${r.players.map(()=>'34px').join(' ')};gap:4px;padding:8px 8px;">
+        <div class="card-header" style="display:grid;grid-template-columns:${gridCols};gap:4px;padding:8px 8px;">
           <div></div><div style="font-size:10px">Loch</div><div style="font-size:10px;text-align:center">Par</div>${playerCols}
         </div>`;
 
@@ -1305,7 +1309,7 @@ function openHistoryDetail(idx) {
           <div class="hsc-hole">${h.n}</div>
           <div class="hsc-name">${h.name.split(' ')[0]}</div>
           <div class="hsc-par">${h.par}</div>
-          ${scoreCells}
+          <div style="display:flex;gap:4px">${scoreCells}</div>
         </div>`;
     });
 
@@ -1319,7 +1323,7 @@ function openHistoryDetail(idx) {
         <div class="hsc-hole"></div>
         <div class="hsc-name">${half}</div>
         <div class="hsc-par">${halfPar}</div>
-        ${subtotals}
+        <div style="display:flex;gap:4px">${subtotals}</div>
       </div>`;
   });
 
@@ -1340,6 +1344,13 @@ function openHistoryDetail(idx) {
 
   content.innerHTML = html;
   document.getElementById('history-overlay').classList.add('open');
+}
+
+function deleteRound(idx) {
+  if (!confirm('Diese Runde aus der Historie löschen?')) return;
+  state.history.splice(idx, 1);
+  saveState();
+  renderStats();
 }
 
 function closeHistoryOverlay(e) {
