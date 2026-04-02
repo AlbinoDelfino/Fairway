@@ -1167,7 +1167,7 @@ function closeZoom() {
 }
 
 // ══════════════════════════════════════════
-// PUNKTE (Brutto & Netto)
+// PUNKTE – Stableford Brutto & Netto
 // Course Rating: 72.5 | Slope: 129 | Par: 72
 // ══════════════════════════════════════════
 const COURSE_RATING = 72.5;
@@ -1176,6 +1176,22 @@ const COURSE_PAR    = 72;
 
 function calcCourseHandicap(hcpIndex) {
   return Math.round(hcpIndex * (COURSE_SLOPE / 113) + (COURSE_RATING - COURSE_PAR));
+}
+
+// Vorgabeschläge für ein Loch berechnen
+function vorgabeForHole(courseHcp, holeHcp) {
+  if (courseHcp === null) return 0;
+  const base = Math.floor(Math.abs(courseHcp) / 18);
+  const extra = Math.abs(courseHcp) % 18;
+  const strokes = base + (holeHcp <= extra ? 1 : 0);
+  return courseHcp >= 0 ? strokes : -strokes;
+}
+
+// Stableford-Punkte: Differenz zum (Netto-)Par
+function stablefordPunkte(score, par) {
+  if (score === null) return null;
+  const diff = par - score; // positiv = unter par
+  return Math.max(0, diff + 2); // 2 = par, 3 = birdie, 1 = bogey, 0 = double+
 }
 
 function saveHcp(pi, val) {
@@ -1216,28 +1232,31 @@ function renderPunkte() {
     const hcpIndex = state.handicaps[pi] ?? null;
     const courseHcp = hcpIndex !== null ? calcCourseHandicap(hcpIndex) : null;
 
-    // Build hole-by-hole data
-    let bruttoTotal = 0, nettoTotal = 0, holesPlayed = 0;
+    let bruttoGesamt = 0, nettoGesamt = 0;
+
     const rows = holes.map((h, idx) => {
-      const brutto = psc[idx] ?? null;
-      if (brutto === null) return null;
-      holesPlayed++;
-      bruttoTotal += brutto;
+      const score = psc[idx] ?? null;
+      if (score === null) return null;
 
-      // Vorgabeschläge: how many strokes this hole gets
-      let vorgabe = 0;
-      if (courseHcp !== null) {
-        // Each stroke is given to holes in order of hcp difficulty
-        vorgabe = Math.floor(courseHcp / 18) + (h.hcp <= (courseHcp % 18) ? 1 : 0);
-        if (courseHcp < 0) vorgabe = -Math.floor(Math.abs(courseHcp) / 18) - (h.hcp <= (Math.abs(courseHcp) % 18) ? 1 : 0);
-      }
+      const vorgabe = vorgabeForHole(courseHcp, h.hcp);
+      const nettoPar = h.par + vorgabe; // effektives Par nach Vorgabe
 
-      const nettoScore = brutto - vorgabe;
-      nettoTotal += nettoScore;
+      const bruttoPkt = stablefordPunkte(score, h.par);      // ohne Vorgabe
+      const nettoPkt  = stablefordPunkte(score, nettoPar);   // mit Vorgabe
 
-      const bCol = scoreClass(brutto, h.par);
-      const nCol = scoreClass(nettoScore, h.par);
+      bruttoGesamt += bruttoPkt ?? 0;
+      nettoGesamt  += nettoPkt  ?? 0;
+
       const vStr = vorgabe > 0 ? `+${vorgabe}` : vorgabe < 0 ? `${vorgabe}` : '–';
+
+      // Farbe für Stableford-Punkte
+      const pktColor = pts => {
+        if (pts >= 4) return 's-eagle';
+        if (pts === 3) return 's-birdie';
+        if (pts === 2) return 's-par';
+        if (pts === 1) return 's-bogey';
+        return 's-double';
+      };
 
       return `
         <div class="punkte-hole-row">
@@ -1245,24 +1264,20 @@ function renderPunkte() {
           <div class="ph-name">${h.name.split(' ')[0]}</div>
           <div class="ph-par">${h.par}</div>
           <div class="ph-vorgabe">${vStr}</div>
-          <div class="ph-brutto"><span class="score-display ${bCol}" style="width:26px;height:26px;font-size:12px">${brutto}</span></div>
-          <div class="ph-netto"><span class="score-display ${nCol}" style="width:26px;height:26px;font-size:12px">${nettoScore}</span></div>
+          <div class="ph-brutto"><span class="score-display ${pktColor(bruttoPkt)}" style="width:26px;height:26px;font-size:12px">${bruttoPkt}</span></div>
+          <div class="ph-netto"><span class="score-display ${courseHcp !== null ? pktColor(nettoPkt) : 's-empty'}" style="width:26px;height:26px;font-size:12px">${courseHcp !== null ? nettoPkt : '–'}</span></div>
         </div>`;
     }).filter(Boolean).join('');
-
-    const bruttoVp = bruttoTotal - holes.filter((_,i) => psc[i] !== null).reduce((a,h) => a+h.par, 0);
-    const nettoVp  = nettoTotal  - holes.filter((_,i) => psc[i] !== null).reduce((a,h) => a+h.par, 0);
-    const fmtVp = v => v === 0 ? 'Par' : (v > 0 ? '+'+v : ''+v);
-    const vpCol = v => v > 0 ? '#ef9a9a' : v < 0 ? '#81c784' : 'var(--white)';
 
     return `
     <div class="punkte-player-card">
       <div class="punkte-player-header">
         <div class="punkte-player-name" style="color:${PLAYER_COLORS[pi]}">${name}</div>
-        <div class="punkte-player-hcp">${courseHcp !== null ? `HCP ${hcpIndex} → ${courseHcp} Vorgabe` : 'Kein HCP eingetragen'}</div>
+        <div class="punkte-player-hcp">${courseHcp !== null ? `HCP-Index ${hcpIndex} → ${courseHcp} Vorgabeschläge` : 'Kein HCP eingetragen'}</div>
       </div>
       <div class="punkte-hole-row ph-header" style="padding:5px 10px">
-        <div></div><div>Loch</div><div style="text-align:center">Par</div>
+        <div></div><div>Loch</div>
+        <div style="text-align:center">Par</div>
         <div style="text-align:center">Vorg.</div>
         <div style="text-align:center">Brutto</div>
         <div style="text-align:center">Netto</div>
@@ -1270,14 +1285,14 @@ function renderPunkte() {
       ${rows}
       <div class="punkte-totals">
         <div class="punkte-total-box">
-          <div class="punkte-total-val">${bruttoTotal}</div>
-          <div class="punkte-total-label">Brutto</div>
-          <div style="font-size:11px;color:${vpCol(bruttoVp)};margin-top:3px">${fmtVp(bruttoVp)} vs. Par</div>
+          <div class="punkte-total-val">${bruttoGesamt}</div>
+          <div class="punkte-total-label">Brutto-Punkte</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Stableford ohne Vorgabe</div>
         </div>
         <div class="punkte-total-box">
-          <div class="punkte-total-val">${courseHcp !== null ? nettoTotal : '–'}</div>
-          <div class="punkte-total-label">Netto</div>
-          <div style="font-size:11px;color:${courseHcp !== null ? vpCol(nettoVp) : 'var(--muted)'};margin-top:3px">${courseHcp !== null ? fmtVp(nettoVp)+' vs. Par' : 'HCP nötig'}</div>
+          <div class="punkte-total-val">${courseHcp !== null ? nettoGesamt : '–'}</div>
+          <div class="punkte-total-label">Netto-Punkte</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${courseHcp !== null ? 'Stableford mit Vorgabe' : 'HCP nötig'}</div>
         </div>
       </div>
     </div>`;
