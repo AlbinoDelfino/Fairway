@@ -483,6 +483,13 @@ html, body {
 .history-sheet-sub { font-size:11px; color:var(--green-pale); margin-top:3px; }
 .history-sheet-close { font-size:22px; cursor:pointer; color:var(--muted); padding:2px 6px; }
 
+.hs-tabs { display:flex; background:rgba(0,0,0,0.3); border-radius:10px; padding:3px; gap:2px; margin-bottom:14px; }
+.hs-tab {
+  flex:1; padding:7px 4px; text-align:center; font-size:12px; font-weight:500;
+  color:var(--muted); cursor:pointer; border-radius:7px; transition:all 0.15s;
+}
+.hs-tab.active { background:var(--green-light); color:var(--white); font-weight:600; }
+
 /* mini scorecard inside overlay */
 .hsc-row {
   display:grid; grid-template-columns:24px 1fr 28px auto;
@@ -1351,14 +1358,20 @@ function renderStats() {
     const vp = r.total - r.par;
     const vpStr = vp===0?'Par':(vp>0?'+'+vp:''+vp);
     const vpCol = vp>0?'col-pos':vp<0?'col-neg':'';
+    // Show points if available (first player)
+    const p0 = r.players?.[0];
+    const hasPunkte = p0 && p0.bruttoGesamt != null;
+    const punkteStr = hasPunkte
+      ? `<span style="color:var(--sand)">B: ${p0.bruttoGesamt} Pkt</span>${p0.courseHcp != null ? ` · <span style="color:var(--green-pale)">N: ${p0.nettoGesamt} Pkt</span>` : ''}`
+      : '';
     return `
     <div class="history-item" onclick="openHistoryDetail(${realIdx})">
-      <div>
-        <div class="hi-date">${r.date}</div>
-        <div class="hi-course" style="color:var(--green-pale)">${r.course}</div>
-        <div class="hi-vp ${vpCol}">${vpStr} vs. Par · ${r.player}</div>
+      <div style="min-width:0;flex:1">
+        <div class="hi-date">${r.date} · ${r.course}</div>
+        <div class="hi-vp ${vpCol}" style="margin-top:2px">${vpStr} vs. Par · ${r.player}</div>
+        ${hasPunkte ? `<div style="font-size:11px;margin-top:2px">${punkteStr}</div>` : ''}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <div class="hi-score">${r.total}</div>
         <div style="color:var(--muted);font-size:16px">›</div>
         <button onclick="event.stopPropagation();deleteRound(${realIdx})" style="background:rgba(192,57,43,0.2);border:1px solid rgba(192,57,43,0.3);color:#ef9a9a;border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑</button>
@@ -1370,15 +1383,35 @@ function renderStats() {
 function saveRound() {
   const holes = currentCourse().holes;
   const totalPar = holes.reduce((a,h)=>a+h.par,0);
-  let saved = false;
 
-  // Save all players with complete scores together as one round entry
   const playersData = [];
   state.players.forEach((name, pi) => {
     const psc = state.scores[pi] || [];
     const played = psc.filter(s=>s!==null);
     if (played.length < 18) return;
-    playersData.push({ name, scores: [...psc] });
+
+    const hcpIndex = state.handicaps?.[pi] ?? null;
+    const courseHcp = hcpIndex !== null ? calcCourseHandicap(hcpIndex) : null;
+
+    // Stableford per hole
+    let bruttoGesamt = 0, nettoGesamt = 0;
+    const stableford = psc.map((sc, idx) => {
+      if (sc === null) return null;
+      const h = holes[idx];
+      const vorgabe = vorgabeForHole(courseHcp, h.hcp);
+      const bp = stablefordPunkte(sc, h.par);
+      const np = stablefordPunkte(sc, h.par + vorgabe);
+      bruttoGesamt += bp ?? 0;
+      nettoGesamt  += np ?? 0;
+      return { bp, np, vorgabe };
+    });
+
+    playersData.push({
+      name, scores: [...psc],
+      hcpIndex, courseHcp,
+      bruttoGesamt, nettoGesamt,
+      stableford
+    });
   });
 
   if (!playersData.length) { alert('Bitte alle 18 Löcher für mindestens einen Spieler eintragen.'); return; }
@@ -1386,7 +1419,7 @@ function saveRound() {
   const date = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
   const total = playersData[0].scores.reduce((a,b)=>a+b,0);
   state.history.push({
-    date, total, par:totalPar,
+    date, total, par: totalPar,
     player: playersData.map(p=>p.name).join(', '),
     course: currentCourse().name,
     courseId: state.courseId,
@@ -1412,78 +1445,125 @@ function openHistoryDetail(idx) {
   const holes = courseData.holes;
   const content = document.getElementById('hs-content');
 
-  // If old format (no players array), show simple message
   if (!r.players || !r.players.length) {
-    content.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">📊</div>Gesamtergebnis: ${r.total} (${r.total > r.par ? '+' : ''}${r.total - r.par} vs. Par)<br><br><span style="font-size:11px;color:var(--muted)">Detaillierte Scorecard nur für neu gespeicherte Runden verfügbar.</span></div>`;
+    content.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">📊</div>Gesamtergebnis: ${r.total}<br><span style="font-size:11px;color:var(--muted)">Details nur für neu gespeicherte Runden verfügbar.</span></div>`;
     document.getElementById('history-overlay').classList.add('open');
     return;
   }
 
-  const numPlayers = r.players ? r.players.length : 1;
+  // ── Tab system ──
+  function showHsTab(tab) {
+    document.querySelectorAll('.hs-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.hs-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('hst-' + tab).classList.add('active');
+    document.getElementById('hsp-' + tab).style.display = 'block';
+  }
+
+  // ── Scorecard panel ──
+  const numPlayers = r.players.length;
   const gridCols = `24px 1fr 28px ${Array(numPlayers).fill('34px').join(' ')}`;
-
-  // Build player columns header
-  const playerCols = r.players ? r.players.map((p,pi) =>
+  const playerCols = r.players.map((p,pi) =>
     `<div style="width:34px;text-align:center;font-size:10px;font-weight:600;color:${PLAYER_COLORS[pi]};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name.split(' ')[0]}</div>`
-  ).join('') : '';
+  ).join('');
 
-  let html = `
-    <div style="margin-bottom:10px;">
-      <div class="card">
-        <div class="card-header" style="display:grid;grid-template-columns:${gridCols};gap:4px;padding:8px 8px;">
-          <div></div><div style="font-size:10px">Loch</div><div style="font-size:10px;text-align:center">Par</div>${playerCols}
-        </div>`;
-
+  let scHtml = `<div class="card"><div class="card-header" style="display:grid;grid-template-columns:${gridCols};gap:4px;padding:8px 8px;"><div></div><div style="font-size:10px">Loch</div><div style="font-size:10px;text-align:center">Par</div>${playerCols}</div>`;
   ['OUT','IN'].forEach((half, hi) => {
-    const start = hi * 9;
-    const end = start + 9;
+    const start = hi * 9, end = start + 9;
     const halfHoles = holes.slice(start, end);
     const halfPar = halfHoles.reduce((a,h)=>a+h.par,0);
-
     halfHoles.forEach((h, i) => {
-      const scoreCells = r.players.map((p, pi) => {
-        const sc = p.scores[start + i];
-        return `<div class="hsc-score ${scoreClass(sc, h.par)}">${sc ?? '–'}</div>`;
+      const cells = r.players.map((p,pi) => {
+        const sc = p.scores[start+i];
+        return `<div class="hsc-score ${scoreClass(sc,h.par)}">${sc??'–'}</div>`;
       }).join('');
-      html += `
-        <div class="hsc-row">
-          <div class="hsc-hole">${h.n}</div>
-          <div class="hsc-name">${h.name.split(' ')[0]}</div>
-          <div class="hsc-par">${h.par}</div>
-          <div style="display:flex;gap:4px">${scoreCells}</div>
-        </div>`;
+      scHtml += `<div class="hsc-row"><div class="hsc-hole">${h.n}</div><div class="hsc-name">${h.name.split(' ')[0]}</div><div class="hsc-par">${h.par}</div><div style="display:flex;gap:4px">${cells}</div></div>`;
     });
-
-    // Subtotal
-    const subtotals = r.players.map((p, pi) => {
-      const t = p.scores.slice(start, end).reduce((a,b)=>a+(b||0),0);
-      return `<div class="hsc-score s-bogey">${t}</div>`;
-    }).join('');
-    html += `
-      <div class="hsc-row hsc-subtotal">
-        <div class="hsc-hole"></div>
-        <div class="hsc-name">${half}</div>
-        <div class="hsc-par">${halfPar}</div>
-        <div style="display:flex;gap:4px">${subtotals}</div>
-      </div>`;
+    const subs = r.players.map(p => `<div class="hsc-score s-bogey">${p.scores.slice(start,end).reduce((a,b)=>a+(b||0),0)}</div>`).join('');
+    scHtml += `<div class="hsc-row hsc-subtotal"><div class="hsc-hole"></div><div class="hsc-name">${half}</div><div class="hsc-par">${halfPar}</div><div style="display:flex;gap:4px">${subs}</div></div>`;
   });
-
-  // Grand total
-  const totals = r.players.map((p, pi) => {
+  const totals = r.players.map((p,pi) => {
     const t = p.scores.reduce((a,b)=>a+(b||0),0);
-    const par = holes.reduce((a,h)=>a+h.par,0);
-    const vp = t - par;
+    const vp = t - r.par;
+    return `<div style="text-align:center;width:34px"><div style="font-size:14px;font-weight:700;font-family:'Playfair Display',serif">${t}</div><div style="font-size:9px;color:${vp>0?'#ef9a9a':vp<0?'#81c784':'var(--muted)'}">${vp===0?'Par':(vp>0?'+'+vp:''+vp)}</div></div>`;
+  }).join('');
+  scHtml += `</div><div style="background:rgba(0,0,0,0.25);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;"><div style="font-size:12px;font-weight:600;color:var(--green-pale)">Gesamt</div><div style="display:flex;gap:6px">${totals}</div></div>`;
+
+  // ── Statistik panel ──
+  let statHtml = r.players.map((p, pi) => {
+    const psc = p.scores;
+    const played = psc.map((s,i) => s!==null ? {s, h:holes[i]} : null).filter(Boolean);
+    if (!played.length) return '';
+    const total = played.reduce((a,b)=>a+b.s,0);
+    const parPlay = played.reduce((a,b)=>a+b.h.par,0);
+    const vp = total - parPlay;
+    const birdies = played.filter(x=>x.s<x.h.par).length;
+    const pars    = played.filter(x=>x.s===x.h.par).length;
+    const bogeys  = played.filter(x=>x.s===x.h.par+1).length;
+    const doubles = played.filter(x=>x.s>=x.h.par+2).length;
+    const best  = played.reduce((a,b)=>(b.s-b.h.par)<(a.s-a.h.par)?b:a);
+    const worst = played.reduce((a,b)=>(b.s-b.h.par)>(a.s-a.h.par)?b:a);
     const vpStr = vp===0?'Par':(vp>0?'+'+vp:''+vp);
-    return `<div style="text-align:center;width:34px"><div style="font-size:14px;font-weight:700;font-family:'Playfair Display',serif">${t}</div><div style="font-size:9px;color:${vp>0?'#ef9a9a':vp<0?'#81c784':'var(--muted)'}">${vpStr}</div></div>`;
+    const vpCol = vp>0?'col-pos':vp<0?'col-neg':'';
+    return `<div class="stat-card">
+      <div class="stat-card-title" style="color:${PLAYER_COLORS[pi]}">${p.name}</div>
+      <div class="stat-row"><span class="stat-label">Score</span><span class="stat-value">${total}</span></div>
+      <div class="stat-row"><span class="stat-label">vs. Par</span><span class="stat-value ${vpCol}">${vpStr}</span></div>
+      <div class="stat-row"><span class="stat-label">🟠 Birdies</span><span class="stat-value">${birdies}</span></div>
+      <div class="stat-row"><span class="stat-label">🟢 Pars</span><span class="stat-value">${pars}</span></div>
+      <div class="stat-row"><span class="stat-label">⚪ Bogeys</span><span class="stat-value">${bogeys}</span></div>
+      <div class="stat-row"><span class="stat-label">🔴 Double+</span><span class="stat-value">${doubles}</span></div>
+      <div class="stat-row"><span class="stat-label">Bestes Loch</span><span class="stat-value">Loch ${best.h.n} (${best.s-best.h.par<=0?'':'+'}${best.s-best.h.par})</span></div>
+      <div class="stat-row"><span class="stat-label">Schwerstes Loch</span><span class="stat-value">Loch ${worst.h.n} (+${worst.s-worst.h.par})</span></div>
+    </div>`;
   }).join('');
 
-  html += `</div></div>
-    <div style="background:rgba(0,0,0,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-      <div style="font-size:12px;font-weight:600;color:var(--green-pale)">Gesamt</div>
-      <div style="display:flex;gap:6px">${totals}</div>
+  // ── Punkte panel ──
+  let pktHtml = r.players.map((p, pi) => {
+    if (!p.stableford) return `<div class="punkte-empty">Keine Punkte-Daten für diese Runde.</div>`;
+    const rows = holes.map((h, idx) => {
+      const sf = p.stableford[idx];
+      if (!sf) return '';
+      const sc = p.scores[idx];
+      const vStr = sf.vorgabe > 0 ? `+${sf.vorgabe}` : sf.vorgabe < 0 ? `${sf.vorgabe}` : '–';
+      const pktCol = pts => pts>=4?'s-eagle':pts===3?'s-birdie':pts===2?'s-par':pts===1?'s-bogey':'s-double';
+      return `<div class="punkte-hole-row">
+        <div class="ph-num">${h.n}</div>
+        <div class="ph-name">${h.name.split(' ')[0]}</div>
+        <div class="ph-par">${h.par}</div>
+        <div class="ph-vorgabe">${vStr}</div>
+        <div class="ph-brutto"><span class="score-display ${pktCol(sf.bp)}" style="width:26px;height:26px;font-size:12px">${sf.bp}</span></div>
+        <div class="ph-netto"><span class="score-display ${p.courseHcp!=null?pktCol(sf.np):'s-empty'}" style="width:26px;height:26px;font-size:12px">${p.courseHcp!=null?sf.np:'–'}</span></div>
+      </div>`;
+    }).join('');
+    return `<div class="punkte-player-card">
+      <div class="punkte-player-header">
+        <div class="punkte-player-name" style="color:${PLAYER_COLORS[pi]}">${p.name}</div>
+        <div class="punkte-player-hcp">${p.courseHcp!=null?`HCP ${p.hcpIndex} → ${p.courseHcp} Vorgabe`:'Kein HCP'}</div>
+      </div>
+      <div class="punkte-hole-row ph-header" style="padding:5px 10px">
+        <div></div><div>Loch</div><div style="text-align:center">Par</div>
+        <div style="text-align:center">Vorg.</div><div style="text-align:center">Brutto</div><div style="text-align:center">Netto</div>
+      </div>
+      ${rows}
+      <div class="punkte-totals">
+        <div class="punkte-total-box"><div class="punkte-total-val">${p.bruttoGesamt}</div><div class="punkte-total-label">Brutto-Punkte</div></div>
+        <div class="punkte-total-box"><div class="punkte-total-val">${p.courseHcp!=null?p.nettoGesamt:'–'}</div><div class="punkte-total-label">Netto-Punkte</div></div>
+      </div>
     </div>`;
+  }).join('');
 
-  content.innerHTML = html;
+  content.innerHTML = `
+    <div class="hs-tabs">
+      <div class="hs-tab active" id="hst-scorecard" onclick="showHsTab('scorecard')">Scorecard</div>
+      <div class="hs-tab" id="hst-statistik" onclick="showHsTab('statistik')">Statistik</div>
+      <div class="hs-tab" id="hst-punkte" onclick="showHsTab('punkte')">Punkte</div>
+    </div>
+    <div class="hs-panel" id="hsp-scorecard">${scHtml}</div>
+    <div class="hs-panel" id="hsp-statistik" style="display:none">${statHtml}</div>
+    <div class="hs-panel" id="hsp-punkte" style="display:none">${pktHtml}</div>`;
+
+  // Make showHsTab accessible inside the overlay
+  window.showHsTab = showHsTab;
   document.getElementById('history-overlay').classList.add('open');
 }
 
